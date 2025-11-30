@@ -1,0 +1,30 @@
+# SonarQube Project Configuration
+# Copy this file to sonar-project.properties and fill in your credentials
+# DO NOT commit sonar-project.properties with actual credentials
+
+sonar.projectKey=jira-clone
+sonar.projectName=Jira Clone
+sonar.projectVersion=1.0
+
+# Source code location
+sonar.sources=.
+sonar.sourceEncoding=UTF-8
+
+# Exclusions
+sonar.exclusions=**/node_modules/**,**/.next/**,**/coverage/**,**/*.test.js,**/*.spec.js,**/public/**,**/.git/**,**/dist/**,**/build/**
+
+# Test exclusions (if you have tests)
+sonar.test.exclusions=**/node_modules/**,**/.next/**
+
+# Language
+sonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+# Coverage exclusions
+sonar.coverage.exclusions=**/node_modules/**,**/.next/**,**/coverage/**,**/*.test.js,**/*.spec.js
+
+# Additional settings
+# Configure these via Jenkins credentials or environment variables
+sonar.host.url=http://sonarqube.imcc.com
+# sonar.login=student
+# sonar.password=your-password-here
+

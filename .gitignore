@@ -1,0 +1,57 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Documentation files (not needed for deployment)
+DEPLOYMENT.md
+COLLEGE_DEPLOYMENT.md
+PREPARE_AT_HOME.md
+QUICK_START.md
+QUICK_DEPLOY.md
+GITHUB_SETUP.md
+GITHUB_REPO_DESCRIPTION.md
+SECURITY_CHECKLIST.md
+WHAT_TO_PUSH.md
+MY_CREDENTIALS.txt
+ENV_TEMPLATE.txt
+*.credentials
+*_CREDENTIALS.txt
+
+# Local development files
+.env.local
+.env.production
+.env.development

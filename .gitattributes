@@ -1,0 +1,5 @@
+# Ensure sensitive files are not tracked even if accidentally added
+.env* filter=git-crypt diff=git-crypt
+*.credentials filter=git-crypt diff=git-crypt
+*_CREDENTIALS.txt filter=git-crypt diff=git-crypt
+
