@@ -13,11 +13,16 @@ pipeline {
         
         // Docker Configuration
         DOCKER_REGISTRY = 'nexus.imcc.com:8082' // Nexus Docker registry port
-        IMAGE_NAME = 'jira-clone'
+        IMAGE_NAME = 'tasknest'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         
         // Application Configuration
-        APP_NAME = 'jira-clone'
+        APP_NAME = 'tasknest'
+        
+        // Cloud Database (Supabase) - Store in Jenkins credentials
+        DATABASE_URL = credentials('supabase-database-url')
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('clerk-publishable-key')
+        CLERK_SECRET_KEY = credentials('clerk-secret-key')
     }
     
     stages {
@@ -32,7 +37,7 @@ pipeline {
             steps {
                 echo '📥 Installing dependencies...'
                 sh '''
-                    npm ci
+                    npm ci --ignore-scripts
                 '''
             }
         }
@@ -45,7 +50,7 @@ pipeline {
                     withSonarQubeEnv('SonarQube') { // Configure in Jenkins System Configuration
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=jira-clone \
+                                -Dsonar.projectKey=tasknest \
                                 -Dsonar.sources=. \
                                 -Dsonar.host.url=${SONAR_URL} \
                                 -Dsonar.login=${SONAR_TOKEN} \
@@ -111,7 +116,7 @@ pipeline {
                     sshagent(['server-ssh-key']) {
                         sh '''
                             ssh -o StrictHostKeyChecking=no student@your-server-ip << 'EOF'
-                                cd /var/www/jira-clone
+                                cd /var/www/tasknest
                                 
                                 # Pull latest image from Nexus
                                 docker login nexus.imcc.com:8082 -u student -p ${NEXUS_PASS}
@@ -121,12 +126,19 @@ pipeline {
                                 docker stop ${APP_NAME} || true
                                 docker rm ${APP_NAME} || true
                                 
-                                # Run new container
-                                docker run -d \\
-                                    --name ${APP_NAME} \\
-                                    --restart unless-stopped \\
-                                    -p 3000:3000 \\
-                                    --env-file .env \\
+                                # Run new container with cloud database (Supabase)
+                                # Environment variables are passed directly from Jenkins
+                                docker run -d \
+                                    --name ${APP_NAME} \
+                                    --restart unless-stopped \
+                                    -p 3000:3000 \
+                                    -e DATABASE_URL="${DATABASE_URL}" \
+                                    -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
+                                    -e CLERK_SECRET_KEY="${CLERK_SECRET_KEY}" \
+                                    -e NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in" \
+                                    -e NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up" \
+                                    -e NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/onboarding" \
+                                    -e NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/onboarding" \
                                     ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
                                 
                                 # Clean up old images
@@ -154,4 +166,3 @@ pipeline {
         }
     }
 }
-

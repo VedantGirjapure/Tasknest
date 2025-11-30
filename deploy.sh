@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Deployment script for Jira Clone
+# Deployment script for Tasknest
 # Usage: ./deploy.sh [production|staging]
 
 set -e
 
 ENVIRONMENT=${1:-production}
-DEPLOY_PATH="/var/www/jira-clone"
+DEPLOY_PATH="/var/www/tasknest"
 BRANCH="main"
 
 echo "🚀 Starting deployment to $ENVIRONMENT..."

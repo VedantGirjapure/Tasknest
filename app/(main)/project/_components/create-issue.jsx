@@ -73,6 +73,7 @@ export default function IssueCreationDrawer({
       ...data,
       status,
       sprintId,
+      assigneeId: data.assigneeId && data.assigneeId.trim() !== "" ? data.assigneeId : null,
     });
   };
 

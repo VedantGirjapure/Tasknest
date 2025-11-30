@@ -2,8 +2,8 @@
 # Copy this file to sonar-project.properties and fill in your credentials
 # DO NOT commit sonar-project.properties with actual credentials
 
-sonar.projectKey=jira-clone
-sonar.projectName=Jira Clone
+sonar.projectKey=tasknest
+sonar.projectName=Tasknest
 sonar.projectVersion=1.0
 
 # Source code location

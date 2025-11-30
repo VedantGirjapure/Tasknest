@@ -2,70 +2,67 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// prisma/schema.prisma
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
-  // uncomment next line if you use Prisma <5.10
-  // directUrl = env("DATABASE_URL_UNPOOLED")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  clerkUserId   String    @unique
-  email         String    @unique
-  name          String?
-  imageUrl      String?
-  createdIssues Issue[]   @relation("Reporter")
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  clerkUserId    String   @unique
   assignedIssues Issue[]  @relation("Assignee")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdIssues  Issue[]  @relation("Reporter")
 }
 
 model Project {
-  id             String   @id @default(cuid())
   name           String
-  key            String
   description    String?
-  organizationId String    // This will store the Clerk organization ID
-  sprints        Sprint[]
-  issues         Issue[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  issues         Issue[]
+  sprints        Sprint[]
 
   @@unique([organizationId, key])
 }
 
 model Sprint {
-  id        String   @id @default(cuid())
-  name      String   @unique
+  id        String       @id @default(cuid())
+  name      String       @unique
   startDate DateTime
   endDate   DateTime
   status    SprintStatus @default(PLANNED)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
   projectId String
   issues    Issue[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Issue {
-  id          String     @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   description String?
   status      IssueStatus
-  order       Int        // This will store the order within its status column
+  order       Int
   priority    IssuePriority
-  assignee    User?      @relation("Assignee", fields: [assigneeId], references: [id])
   assigneeId  String?
-  reporter    User       @relation("Reporter", fields: [reporterId], references: [id])
   reporterId  String
-  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String
-  sprint      Sprint?    @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   sprintId    String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  projectId   String
+  assignee    User?         @relation("Assignee", fields: [assigneeId], references: [id])
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporter    User          @relation("Reporter", fields: [reporterId], references: [id])
+  sprint      Sprint?       @relation(fields: [sprintId], references: [id])
 
   @@index([status, order])
 }

@@ -10,8 +10,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Jira Clone",
-  description: "",
+  title: "Tasknest",
+  description: "Project management and issue tracking application",
 };
 export default function RootLayout({ children }) {
   return (

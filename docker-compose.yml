@@ -17,9 +17,9 @@ services:
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:-/onboarding}
     restart: unless-stopped
     networks:
-      - jira-network
+      - tasknest-network
 
 networks:
-  jira-network:
+  tasknest-network:
     driver: bridge
 
