@@ -9,7 +9,7 @@ pipeline {
         
         // SonarQube Configuration
         SONAR_URL = 'http://sonarqube.imcc.com'
-        SONAR_TOKEN = credentials('sonar-token') // Store in Jenkins credentials
+        SONAR_TOKEN = credentials('sonar-token-2401056') // Store in Jenkins credentials
         
         // Docker Configuration
         DOCKER_REGISTRY = 'nexus.imcc.com:8082' // Nexus Docker registry port
