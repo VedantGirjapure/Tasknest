@@ -20,9 +20,9 @@ pipeline {
         APP_NAME = 'tasknest'
         
         // Cloud Database (Supabase) - Store in Jenkins credentials
-        DATABASE_URL = credentials('supabase-database-url')
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('clerk-publishable-key')
-        CLERK_SECRET_KEY = credentials('clerk-secret-key')
+        DATABASE_URL = credentials('database-tasknest')
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('Secret Key tasknest')
+        CLERK_SECRET_KEY = credentials('Secret key')
     }
     
     stages {
@@ -47,7 +47,7 @@ pipeline {
                 echo '🔍 Running SonarQube analysis...'
                 script {
                     def scannerHome = tool 'SonarQube Scanner' // Configure in Jenkins Global Tools
-                    withSonarQubeEnv('SonarQube') { // Configure in Jenkins System Configuration
+                    withSonarQubeEnv('2401056-SonarQube') { // Configure in Jenkins System Configuration
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=tasknest \
