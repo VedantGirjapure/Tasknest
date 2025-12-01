@@ -5,11 +5,11 @@ pipeline {
         // Nexus Configuration
         NEXUS_URL = 'http://nexus.imcc.com'
         NEXUS_USER = 'student'
-        NEXUS_PASS = credentials('nexus-password') // Store in Jenkins credentials
+        NEXUS_PASS = credentials('2401056-Nexus') // Store in Jenkins credentials
         
         // SonarQube Configuration
         SONAR_URL = 'http://sonarqube.imcc.com'
-        SONAR_TOKEN = credentials('sonar-token-2401056') // Store in Jenkins credentials
+        SONAR_TOKEN = credentials('sonar-token-2401056') // Tasknest sonar token
         
         // Docker Configuration
         DOCKER_REGISTRY = 'nexus.imcc.com:8082' // Nexus Docker registry port
@@ -115,7 +115,7 @@ pipeline {
                     // SSH into server and deploy
                     sshagent(['server-ssh-key']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no student@your-server-ip << 'EOF'
+                            ssh -o StrictHostKeyChecking=no student@SERVER_IP_HERE << 'EOF'
                                 cd /var/www/tasknest
                                 
                                 # Pull latest image from Nexus
@@ -127,7 +127,6 @@ pipeline {
                                 docker rm ${APP_NAME} || true
                                 
                                 # Run new container with cloud database (Supabase)
-                                # Environment variables are passed directly from Jenkins
                                 docker run -d \
                                     --name ${APP_NAME} \
                                     --restart unless-stopped \
@@ -154,11 +153,9 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            // Optional: Send notification
         }
         failure {
             echo '❌ Pipeline failed!'
-            // Optional: Send notification
         }
         always {
             echo '🧹 Cleaning up...'
