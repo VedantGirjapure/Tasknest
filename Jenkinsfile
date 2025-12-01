@@ -1,165 +1,152 @@
 pipeline {
-    agent any
-    
-    environment {
-        // Nexus Configuration
-        NEXUS_URL = 'http://nexus.imcc.com'
-        NEXUS_USER = 'student'
-        NEXUS_PASS = credentials('2401056-Nexus') // Store in Jenkins credentials
-        
-        // SonarQube Configuration
-        SONAR_URL = 'http://sonarqube.imcc.com'
-        SONAR_TOKEN = credentials('sonar-token-2401056') // Tasknest sonar token
-        
-        // Docker Configuration
-        DOCKER_REGISTRY = 'nexus.imcc.com:8082' // Nexus Docker registry port
-        IMAGE_NAME = 'tasknest'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        
-        // Application Configuration
-        APP_NAME = 'tasknest'
-        
-        // Cloud Database (Supabase) - Store in Jenkins credentials
-        DATABASE_URL = credentials('database-tasknest')
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('Secret Key tasknest')
-        CLERK_SECRET_KEY = credentials('Secret key')
+
+    // Run the pipeline on a Kubernetes agent with 3 containers:
+    // - sonar-scanner  : to run SonarQube analysis
+    // - kubectl        : to deploy to Kubernetes
+    // - dind (docker)  : to build and push Docker images
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli
+    command:
+      - cat
+    tty: true
+
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+      - cat
+    tty: true
+    securityContext:
+      runAsUser: 0
+      readOnlyRootFilesystem: false
+    env:
+    - name: KUBECONFIG
+      value: /kube/config
+    volumeMounts:
+    - name: kubeconfig-secret
+      mountPath: /kube/config
+      subPath: kubeconfig
+
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
+    volumeMounts:
+    - name: docker-config
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
+
+  volumes:
+  - name: docker-config
+    configMap:
+      name: docker-daemon-config
+
+  - name: kubeconfig-secret
+    secret:
+      secretName: kubeconfig-secret
+'''
+        }
     }
-    
+
+    environment {
+        // Docker / Nexus
+        DOCKER_REGISTRY   = 'nexus.imcc.com:8082'
+        DOCKER_REPOSITORY = '2401056-tasknest'          // adjust to the repo your professor created
+        IMAGE_NAME        = 'tasknest'
+        IMAGE_TAG         = 'latest'
+
+        // SonarQube
+        SONAR_PROJECT_KEY = 'tasknest'
+        // Internal Sonar URL used inside the cluster – keep as given by college
+        SONAR_HOST_URL    = 'http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000'
+    }
+
     stages {
-        stage('Checkout') {
+
+        stage('Build Docker Image') {
             steps {
-                echo '📦 Checking out code...'
-                checkout scm
+                container('dind') {
+                    sh '''
+                        # wait for docker daemon to be ready
+                        sleep 15
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker image ls
+                    '''
+                }
             }
         }
-        
-        stage('Install Dependencies') {
-            steps {
-                echo '📥 Installing dependencies...'
-                sh '''
-                    npm ci --ignore-scripts
-                '''
-            }
-        }
-        
+
+        // (Optional) you can add a test stage here if you have tests to run inside the container
+
         stage('SonarQube Analysis') {
             steps {
-                echo '🔍 Running SonarQube analysis...'
-                script {
-                    def scannerHome = tool 'SonarQube Scanner' // Configure in Jenkins Global Tools
-                    withSonarQubeEnv('2401056-SonarQube') { // Configure in Jenkins System Configuration
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=tasknest \
-                                -Dsonar.sources=. \
-                                -Dsonar.host.url=${SONAR_URL} \
-                                -Dsonar.login=${SONAR_TOKEN} \
-                                -Dsonar.exclusions=**/node_modules/**,**/.next/**,**/coverage/**,**/*.test.js
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Quality Gate') {
-            steps {
-                echo '✅ Checking SonarQube Quality Gate...'
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-        
-        stage('Generate Prisma Client') {
-            steps {
-                echo '🔧 Generating Prisma Client...'
-                sh '''
-                    npx prisma generate
-                '''
-            }
-        }
-        
-        stage('Build Application') {
-            steps {
-                echo '🏗️ Building Next.js application...'
-                sh '''
-                    npm run build
-                '''
-            }
-        }
-        
-        stage('Build and Push Docker Image') {
-            steps {
-                echo '🐳 Building Docker image...'
-                script {
-                    // Login to Nexus Docker registry
-                    sh """
-                        docker login ${DOCKER_REGISTRY} -u ${NEXUS_USER} -p ${NEXUS_PASS}
-                    """
-                    
-                    // Build Docker image
-                    def dockerImage = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
-                    
-                    // Push to Nexus
-                    echo '📤 Pushing Docker image to Nexus...'
-                    dockerImage.push()
-                    dockerImage.push("${DOCKER_REGISTRY}/${IMAGE_NAME}:latest")
-                }
-            }
-        }
-        
-        stage('Deploy to Server') {
-            steps {
-                echo '🚀 Deploying to server...'
-                script {
-                    // SSH into server and deploy
-                    sshagent(['server-ssh-key']) {
+                container('sonar-scanner') {
+                    // Use your existing sonar token credential: sonar-token-2401056
+                    withCredentials([string(credentialsId: 'sonar-token-2401056', variable: 'SONAR_TOKEN')]) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no student@SERVER_IP_HERE << 'EOF'
-                                cd /var/www/tasknest
-                                
-                                # Pull latest image from Nexus
-                                docker login nexus.imcc.com:8082 -u student -p ${NEXUS_PASS}
-                                docker pull ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-                                
-                                # Stop and remove old container
-                                docker stop ${APP_NAME} || true
-                                docker rm ${APP_NAME} || true
-                                
-                                # Run new container with cloud database (Supabase)
-                                docker run -d \
-                                    --name ${APP_NAME} \
-                                    --restart unless-stopped \
-                                    -p 3000:3000 \
-                                    -e DATABASE_URL="${DATABASE_URL}" \
-                                    -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
-                                    -e CLERK_SECRET_KEY="${CLERK_SECRET_KEY}" \
-                                    -e NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in" \
-                                    -e NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up" \
-                                    -e NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/onboarding" \
-                                    -e NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/onboarding" \
-                                    ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-                                
-                                # Clean up old images
-                                docker image prune -f
-                            EOF
+                            sonar-scanner \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
             }
         }
-    }
-    
-    post {
-        success {
-            echo '✅ Pipeline completed successfully!'
+
+        stage('Login to Docker Registry') {
+            steps {
+                container('dind') {
+                    // Use your existing Nexus credential: 2401056-Nexus (username + password)
+                    withCredentials([usernamePassword(credentialsId: '2401056-Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                        sh '''
+                            docker --version
+                            sleep 10
+                            docker login ${DOCKER_REGISTRY} -u $NEXUS_USER -p $NEXUS_PASS
+                        '''
+                    }
+                }
+            }
         }
-        failure {
-            echo '❌ Pipeline failed!'
+
+        stage('Build - Tag - Push') {
+            steps {
+                container('dind') {
+                    sh '''
+                        TARGET_IMAGE=${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $TARGET_IMAGE
+                        docker push $TARGET_IMAGE
+                        docker pull $TARGET_IMAGE
+                        docker image ls
+                    '''
+                }
+            }
         }
-        always {
-            echo '🧹 Cleaning up...'
-            sh 'docker system prune -f || true'
+
+        stage('Deploy Tasknest Application') {
+            steps {
+                container('kubectl') {
+                    script {
+                        // assumes you have k8s-deployment/tasknest-deployment.yaml in your repo
+                        dir('k8s-deployment') {
+                            sh '''
+                                kubectl apply -f tasknest-deployment.yaml
+                                # Adjust namespace if your college uses a specific one, e.g. 2401056
+                                kubectl rollout status deployment/tasknest-deployment -n 2401056
+                            '''
+                        }
+                    }
+                }
+            }
         }
     }
 }
