@@ -59,7 +59,7 @@ spec:
 
     environment {
         // Docker / Nexus
-        DOCKER_REGISTRY   = 'nexus.imcc.com'
+        DOCKER_REGISTRY   = 'nexus.imcc.com:8082'
         DOCKER_REPOSITORY = '2401056-tasknest'          // adjust to the repo your professor created
         IMAGE_NAME        = 'tasknest'
         IMAGE_TAG         = 'latest'
