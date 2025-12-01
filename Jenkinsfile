@@ -59,7 +59,7 @@ spec:
 
     environment {
         // Docker / Nexus
-        DOCKER_REGISTRY   = 'nexus.imcc.com:8082'
+        DOCKER_REGISTRY   = 'nexus.imcc.com'
         DOCKER_REPOSITORY = '2401056-tasknest'          // adjust to the repo your professor created
         IMAGE_NAME        = 'tasknest'
         IMAGE_TAG         = 'latest'
@@ -96,7 +96,7 @@ spec:
                             sonar-scanner \
                               -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                               -Dsonar.host.url=${SONAR_HOST_URL} \
-                              -Dsonar.login=$SONAR_TOKEN
+                              -Dsonar.token=$SONAR_TOKEN
                         '''
                     }
                 }
